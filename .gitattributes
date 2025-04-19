@@ -1,0 +1,21 @@
+# Ensure consistent line endings
+* text=auto
+
+# Set default behavior for Python files
+*.py linguist-language=Python
+
+# Treat CSV and text files as UTF-8
+*.csv text eol=lf
+*.txt text eol=lf
+
+# Treat Markdown files as documentation
+*.md text
+
+# Handle images or binary assets correctly
+*.png binary
+*.jpg binary
+*.ico binary
+*.svg text
+
+# Exclude session CSVs from language stats
+data/sessions/* linguist-documentation
