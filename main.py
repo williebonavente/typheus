@@ -1,75 +1,79 @@
-# main.py
-
 import tkinter as tk
-from datetime import datetime
-from pynput import keyboard
-import pandas as pd
-import os
-
-# Constants
-LOG_DIR = "data/sessions"
-os.makedirs(LOG_DIR, exist_ok=True)
+from tkinter import ttk
+import time
 
 class TypingApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("TypeSense - Typing Feedback System")
-        self.root.geometry("800x400")
-        self.session_data = []
+        self.root.title("TypeTrack - Keystroke Feedback Typing System")
+        self.root.geometry("800x500")
+        self.root.configure(bg="#f4f4f4")
 
-        # Build UI
-        self.build_interface()
+        self.sample_text = "The quick brown fox jumps over the lazy dog."
+        self.current_index = 0
+        self.start_time = None
+        self.errors = 0
 
-        # Keyboard listener
-        self.listener = keyboard.Listener(on_press=self.on_key_press, on_release=self.on_key_release)
-        self.listener.start()
+        self.build_ui()
 
-    def build_interface(self):
-        self.label = tk.Label(self.root, text="Start typing below. Your keystrokes are being tracked.",
-                              font=("Segoe UI", 14))
-        self.label.pack(pady=10)
+    def build_ui(self):
+        title = tk.Label(self.root, text="Welcome to TypeTrack", font=("Helvetica", 20, "bold"), bg="#f4f4f4")
+        title.pack(pady=20)
 
-        self.textbox = tk.Text(self.root, height=10, font=("Consolas", 14))
-        self.textbox.pack(padx=20, pady=10, fill="both", expand=True)
-        self.textbox.focus_set()
+        self.text_display = tk.Label(self.root, text=self.sample_text, font=("Courier New", 16), wraplength=700, bg="#f4f4f4")
+        self.text_display.pack(pady=10)
 
-        self.save_btn = tk.Button(self.root, text="Save Session", command=self.save_session)
-        self.save_btn.pack(pady=10)
+        self.entry = tk.Entry(self.root, font=("Courier New", 16), width=70)
+        self.entry.pack(pady=10)
+        self.entry.bind("<KeyPress>", self.on_key_press)
 
-    def on_key_press(self, key):
-        try:
-            self.session_data.append({
-                "timestamp": datetime.now(),
-                "key": key.char,
-                "event": "press"
-            })
-        except AttributeError:
-            self.session_data.append({
-                "timestamp": datetime.now(),
-                "key": str(key),
-                "event": "press"
-            })
+        self.status_label = tk.Label(self.root, text="", font=("Arial", 12), bg="#f4f4f4", fg="gray")
+        self.status_label.pack(pady=10)
 
-    def on_key_release(self, key):
-        try:
-            self.session_data.append({
-                "timestamp": datetime.now(),
-                "key": key.char,
-                "event": "release"
-            })
-        except AttributeError:
-            self.session_data.append({
-                "timestamp": datetime.now(),
-                "key": str(key),
-                "event": "release"
-            })
+        self.stats_frame = tk.Frame(self.root, bg="#f4f4f4")
+        self.stats_frame.pack(pady=10)
 
-    def save_session(self):
-        df = pd.DataFrame(self.session_data)
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"{LOG_DIR}/typing_session_{timestamp}.csv"
-        df.to_csv(filename, index=False)
-        self.label.config(text=f"Session saved to {filename}")
+        self.wpm_label = tk.Label(self.stats_frame, text="WPM: 0", font=("Arial", 14), bg="#f4f4f4")
+        self.wpm_label.grid(row=0, column=0, padx=10)
+
+        self.accuracy_label = tk.Label(self.stats_frame, text="Accuracy: 100%", font=("Arial", 14), bg="#f4f4f4")
+        self.accuracy_label.grid(row=0, column=1, padx=10)
+
+    def on_key_press(self, event):
+        if self.start_time is None:
+            self.start_time = time.time()
+
+        expected_char = self.sample_text[self.current_index]
+        typed_char = event.char
+
+        if typed_char == expected_char:
+            self.current_index += 1
+            if self.current_index == len(self.sample_text):
+                self.end_test()
+        else:
+            self.errors += 1
+
+        self.update_stats()
+
+    def update_stats(self):
+        elapsed_time = time.time() - self.start_time
+        elapsed_minutes = elapsed_time / 60
+
+        typed_text = self.entry.get()
+        words = len(typed_text.split())
+        wpm = int(words / elapsed_minutes) if elapsed_minutes > 0 else 0
+
+        total_typed = len(typed_text)
+        correct = total_typed - self.errors if total_typed >= self.errors else 0
+        accuracy = (correct / total_typed) * 100 if total_typed > 0 else 100
+
+        self.wpm_label.config(text=f"WPM: {wpm}")
+        self.accuracy_label.config(text=f"Accuracy: {accuracy:.2f}%")
+
+    def end_test(self):
+        self.entry.config(state="disabled")
+        self.status_label.config(text="Test complete. Great job!", fg="green")
+
 
 if __name__ == "__main__":
     root = tk.Tk()
